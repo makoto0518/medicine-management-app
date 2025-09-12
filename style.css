@@ -1,0 +1,192 @@
+body {
+    text-align: center;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+
+    /* ページの余白を0にする */
+    padding: 0;
+}
+
+.logout-button,
+.delete-button {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 6px 12px;
+    font-size: 12px;
+    background-color: #ff4b5c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.delete-button {
+    top: 50px;
+    /* ログアウトボタンの少し下に配置 */
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    background-color: white;
+    color: black;
+}
+
+.header,
+.section {
+    background-color: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.button-container {
+    /*フレックスボックスレイアウトを使用 */
+    display: flex;
+
+    /* 子要素を水平に中央揃えにする*/
+    justify-content: center;
+
+    /*子要素を垂直に中央揃え*/
+    align-items: center;
+
+    /*要素が多い場合に折り返す */
+    flex-wrap: wrap;
+
+    /*上下に20pxの余白 */
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.button-container button {
+    /*ボタン内のテキストに10pxの上下、20pxの余白を追加 */
+    padding: 10px 20px;
+
+    /*ボタン同士の間に5pxの余白を追加 */
+    margin: 5px;
+
+    /*ボタンの幅を200pxに設定 */
+    width: 200px;
+
+    /*ボタンのフォントサイズを16pxに設定 */
+    font-size: 16px;
+
+    /*ボタンの背景色を青に設定 */
+    background-color: #00A0E8;
+
+    /*ボタンのテキスト色を白色に */
+    color: white;
+
+    /*ボタンの枠線を無くす */
+    border: none;
+
+    /*ボタンの角を5px丸くする */
+    border-radius: 5px;
+
+    /*ボタンにカーソルを合わせたとき、ポインターアイコンに変更 */
+    cursor: pointer;
+}
+
+.button-container .home-button {
+    /*何もしていないとき、homeボタンは黄色 */
+    background-color: gold;
+}
+
+/* このようにhoverの優先順位を付けなければ、ボタンにマウスが触れた際に濃い青色になってしまう */
+.button-container .home-button:hover {
+    /*ホバー時にボタンの背景色を濃い黄色に変更 */
+    background-color: goldenrod;
+}
+
+/* not(.home-button)とすることで、他のボタンがホバーされたときの背景色が濃い青色に変更されるようになるが、 */
+/* home-buttonクラスを持つボタンには適用されない */
+.button-container button:hover:not(.home-button) {
+    /*ホバー時にボタンの背景色を濃い青色に変更*/
+    background-color: #0052a9;
+}
+
+
+/*区切り線*/
+.divider {
+    margin: 20px 0;
+    border-bottom: 2px solid #000000;
+}
+
+.medication-list {
+    text-align: left;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.medication-list h3 {
+    margin-top: 0;
+    color: #000000;
+}
+
+.medication-list ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.medication-list ul li {
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+/* 以下フォーム */
+.form-container {
+    padding: 20px;
+    text-align: left;
+}
+
+.form-container label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-container input[type=text],
+.form-container input[type=time],
+.form-container input[type=number],
+.form-container input[type=date] {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-container input[type=submit] {
+    background-color: #00A0E8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.form-container input[type=submit]:hover {
+    background-color: #0052a9;
+}
+
+
+
+/* デバッグメッセージのスタイル */
+.debug-message {
+    color: red;
+    text-align: left;
+}

@@ -1,0 +1,231 @@
+<?php
+// セッションの開始
+session_start();
+
+// デバッグモードをオン
+$debug_mode = true;
+if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
+    if ($debug_mode) {
+        echo "<p style='color:red;'>セッションが存在しません。</p>";
+        echo "<p>デバッグ情報:</p>";
+        echo "<pre>SESSION: " . print_r($_SESSION, true) . "</pre>";
+    }
+    exit;
+}
+
+// セッションから値を取得
+$username = $_SESSION['username'];
+$user_id = $_SESSION['user_id'];
+
+// データベースに接続するコードが入ったファイルをインクルード
+require 'db.php';
+
+// ステップを取得
+$step = isset($_POST['step']) ? intval($_POST['step']) : 1;
+
+// 戻るボタンが押された場合の処理
+if (isset($_POST['back'])) {
+    $step--; // 1つ前に戻るため、1だけ減らす
+} else if (isset($_POST['next'])) {
+    $step++; // 次へ進むため、1だけ増やす
+}
+
+// 変数の初期化
+$medication_name = '';
+$administration_time = '';
+
+try {
+    if ($step == 1) { //この段階では服用する薬を選ぶ
+        // ユーザーが使っている薬名を取得
+        $stmt = $pdo->prepare("SELECT DISTINCT medication_name FROM medication_schedule WHERE user_id = :user_id");
+        $stmt->bindParam(':user_id', $user_id);
+        $stmt->execute();
+        $medications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } elseif ($step == 2 && isset($_POST['medication_name'])) { //この段階では服用する薬の時間帯を選ぶ
+        // 選択された薬の服用時間を取得
+        $medication_name = $_POST['medication_name'];
+        //服用時間が早い順
+        $stmt = $pdo->prepare("SELECT administration_time FROM medication_schedule WHERE user_id = :user_id AND medication_name = :medication_name ORDER BY administration_time");
+        $stmt->bindParam(':user_id', $user_id);
+        $stmt->bindParam(':medication_name', $medication_name);
+        $stmt->execute();
+        $administration_times = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } elseif ($step == 3 && isset($_POST['medication_name']) && isset($_POST['administration_time'])) {  //この段階では服用日を選ぶ
+        // 選択された薬と服用時間のスケジュールを取得
+        $medication_name = $_POST['medication_name'];
+        $administration_time = $_POST['administration_time'];
+        $stmt = $pdo->prepare("SELECT start_date, end_date FROM medication_schedule WHERE user_id = :user_id AND medication_name = :medication_name AND administration_time = :administration_time");
+        $stmt->bindParam(':user_id', $user_id);
+        $stmt->bindParam(':medication_name', $medication_name);
+        $stmt->bindParam(':administration_time', $administration_time);
+        $stmt->execute();
+        $schedule = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // 既存の服用記録があるか確認
+        //まず、POSTメソッドでかつ送られてきた内容がある
+        if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['administration_date'])) {
+            //送られたデータを入手
+            $selected_date = $_POST['administration_date'];
+
+            //送られたデータが服用期間内である場合
+            if ($selected_date >= $schedule['start_date'] && $selected_date <= $schedule['end_date']) {
+                try {
+                    //さらに、その記録が既にないかを確認する
+                    $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM medication_record 
+                        WHERE user_id = :user_id AND drug_id = 
+                        (SELECT drug_id FROM medication_schedule WHERE user_id = :user_id AND medication_name = :medication_name AND administration_time = :administration_time)
+                        AND administration_date = :administration_date");
+                    $check_stmt->bindParam(':user_id', $user_id);
+                    $check_stmt->bindParam(':medication_name', $medication_name);
+                    $check_stmt->bindParam(':administration_time', $administration_time);
+                    $check_stmt->bindParam(':administration_date', $selected_date);
+                    $check_stmt->execute();
+                    //ここで記録されているかどうかの結果を入手
+                    $record_exists = $check_stmt->fetchColumn();
+
+                    //もしその日に既にレコードがある場合
+                    if ($record_exists) {
+                        $record_message = "<p style='color: red;'>{$selected_date}の服用記録は既に行っています。</p>";
+                    } else {
+                        //記録をデータベースに書き込む
+                        $stmt = $pdo->prepare("INSERT INTO medication_record (user_id, drug_id, administration_date)
+                            VALUES (:user_id, 
+                            (SELECT drug_id FROM medication_schedule 
+                            WHERE user_id = :user_id AND medication_name = :medication_name AND administration_time = :administration_time), 
+                            :administration_date)");
+                        $stmt->bindParam(':user_id', $user_id);
+                        $stmt->bindParam(':medication_name', $medication_name);
+                        $stmt->bindParam(':administration_time', $administration_time);
+                        $stmt->bindParam(':administration_date', $selected_date);
+                        $stmt->execute();
+                        $record_message = "<p>服用記録が正常に保存されました。</p>";
+                        $record_details = htmlspecialchars($medication_name) . "　⌚" . htmlspecialchars($administration_time) ."  📅" . htmlspecialchars($selected_date);
+                        // $record_details = "<p>記録内容:</p>
+                        //     <ul>
+                        //         <li>薬名: " . htmlspecialchars($medication_name) . "</li>
+                        //         <li>服用時間: " . htmlspecialchars($administration_time) . "</li>
+                        //         <li>服用日付: " . htmlspecialchars($selected_date) . "</li>
+                        //     </ul>";
+                    }
+                } catch (PDOException $e) {
+                    $record_message = "<p style='color: red;'>データベースエラー: " . $e->getMessage() . "</p>";
+                }
+            } else {
+                $record_message = "<p style='color: red;'>選択された日付は服用期間外です。もう一度やり直してください。</p>";
+            }
+        }
+    }
+} catch (PDOException $e) {
+    die("データベースエラー: " . $e->getMessage());
+}
+?>
+
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css" type="text/css">
+    <title>薬の服用記録</title>
+</head>
+
+
+<body>
+
+    <form action="logout.php" method="post">
+        <button class="logout-button" type="submit">ログアウト</button>
+    </form>
+
+    <form action="deleteMedicine.php" method="get">
+        <button class="delete-button" type="submit">薬を削除</button>
+    </form>
+
+    <div class="container">
+
+        <div class="header">
+            <h2>薬の服用記録</h2>
+            <?php if (isset($record_message)) {
+                echo $record_message;
+                if (isset($record_details)) {
+                    echo $record_details;
+                }
+            } ?>
+        </div>
+
+
+        <div class="button-container">
+            <form action="home.php" method="get">
+                <button class="home-button" type="submit">ホーム画面へ</button>
+            </form>
+
+
+            <form action="list.php" method="get">
+                <button type="submit">薬リスト</button>
+            </form>
+
+            <form action="add.php" method="get">
+                <button type="submit">薬を新規登録</button>
+            </form>
+        </div>
+
+        <div class="divider"></div>
+
+        <?php if ($step == 1): ?>
+            <div class="form-container">
+                <form method="post" action="">
+                    <label for="medication_name">薬を選択:</label>
+                    <select name="medication_name" id="medication_name" required>
+                        <option value="">選択してください</option>
+                        <?php foreach ($medications as $medication): ?>
+                            <option value="<?php echo htmlspecialchars($medication['medication_name']); ?>">
+                                <?php echo htmlspecialchars($medication['medication_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <input type="hidden" name="step" value="1">
+                    <button type="submit" name="next" value="true">次へ</button>
+                </form>
+            </div>
+        <?php elseif ($step == 2): ?>
+            <div class="form-container">
+                <form method="post" action="">
+                    <label for="administration_time">服用時間を選択:</label>
+                    <select name="administration_time" id="administration_time">
+                        <option value="">選択してください</option>
+                        <?php foreach ($administration_times as $time): ?>
+                            <option value="<?php echo htmlspecialchars($time['administration_time']); ?>">
+                                <?php echo htmlspecialchars($time['administration_time']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <input type="hidden" name="medication_name" value="<?php echo htmlspecialchars($medication_name); ?>">
+                    <input type="hidden" name="step" value="2">
+                    <button type="submit" name="next" value="true">次へ</button>
+                    <button type="submit" name="back" value="true">戻る</button>
+                    <p>薬名: <?php echo htmlspecialchars($medication_name); ?></p>
+                </form>
+            </div>
+        <?php elseif ($step == 3): ?>
+            <div class="form-container">
+                <form method="post" action="">
+                    <label for="administration_date">服用日付を選択:</label>
+                    <input type="date" id="administration_date" name="administration_date">
+                    <input type="hidden" name="medication_name" value="<?php echo htmlspecialchars($medication_name); ?>">
+                    <input type="hidden" name="administration_time"
+                        value="<?php echo htmlspecialchars($administration_time); ?>">
+                    <input type="hidden" name="step" value="3">
+                    <button type="submit">記録</button>
+                    <button type="submit" name="back" value="true">戻る</button>
+                    <p>薬名: <?php echo htmlspecialchars($medication_name); ?></p>
+                    <p>服用時間: <?php echo htmlspecialchars($administration_time); ?></p>
+                    <p>服用開始日: <?php echo htmlspecialchars($schedule['start_date']); ?></p>
+                    <p>服用終了日: <?php echo htmlspecialchars($schedule['end_date']); ?></p>
+                </form>
+            </div>
+        <?php endif; ?>
+
+    </div>
+</body>
+
+</html>

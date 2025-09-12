@@ -1,0 +1,58 @@
+-- 使用するデータベースを選択
+USE inov_test;
+
+-- users テーブルを作成
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,  -- ユーザーID（プライマリキー）
+    username VARCHAR(255) NOT NULL,  -- ユーザー名（NULLを許可しない）
+    password VARCHAR(255) NOT NULL  -- パスワード（NULLを許可しない）
+);
+
+
+
+-- medication_schedule テーブルを作成
+CREATE TABLE medication_schedule (
+    drug_id INT AUTO_INCREMENT PRIMARY KEY,  -- 薬番号（プライマリキー）
+    user_id INT NOT NULL,  -- 使用者ユーザーID（NULLを許可しない）
+    medication_name VARCHAR(255) NOT NULL,  -- 薬名（NULLを許可しない）
+    administration_time TIME NOT NULL,  -- 薬服用時間（NULLを許可しない）
+    dose_count INT NOT NULL,  -- 薬服用数（NULLを許可しない）
+    start_date DATE NOT NULL,  -- 服用開始日（NULLを許可しない）
+    end_date DATE NOT NULL,  -- 服用終了日（NULLを許可しない）
+    FOREIGN KEY (user_id) REFERENCES users(user_id)  -- usersテーブルのuser_idを参照
+);
+
+
+
+-- medication_record テーブルを作成
+CREATE TABLE medication_record (
+    user_id INT NOT NULL,  -- 使用者ユーザーID（NULLを許可しない）
+    drug_id INT NOT NULL,  -- 薬番号（NULLを許可しない）
+    administration_date DATE NOT NULL,  -- 服用した日付（NULLを許可しない）
+    FOREIGN KEY (user_id) REFERENCES users(user_id),  -- usersテーブルのuser_idを参照
+    FOREIGN KEY (drug_id) REFERENCES medication_schedule(drug_id)  -- medication_scheduleテーブルのdrug_idを参照
+);
+
+
+
+
+-- users テーブルにサンプルデータを挿入
+INSERT INTO users (username, password) VALUES
+('hironaka', '1234');
+
+-- medication_schedule テーブルにサンプルデータを挿入
+INSERT INTO medication_schedule (user_id, medication_name, administration_time, dose_count, start_date, end_date) VALUES
+(1, '薬A', '08:00:00', 1, '2024-07-20', '2023-08-31'),
+(1, '薬A', '12:00:00', 1, '2024-07-20', '2023-08-31'),
+(1, '薬A', '20:00:00', 1, '2024-07-20', '2023-08-31'),
+(1, '薬B', '18:00:00', 2, '2024-08-01', '2023-08-07'),
+(1, '薬C', '12:00:00', 1, '2024-08-01', '2024-08-20');
+
+-- medication_record テーブルにサンプルデータを挿入
+INSERT INTO medication_record (user_id, drug_id, administration_date) VALUES
+(1, 1, '2024-08-01'),
+(1, 2, '2024-08-01'),
+(1, 3, '2024-08-15'),
+
+
+
